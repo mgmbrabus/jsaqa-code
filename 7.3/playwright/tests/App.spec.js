@@ -1,22 +1,33 @@
 const { test, expect } = require("@playwright/test");
+const { email, password } = require("../user");
 
-test("test", async ({ page }) => {
-  // Go to https://netology.ru/free/management#/
-  await page.goto("https://netology.ru/free/management#/");
+test.setTimeout(90000);
 
-  // Click a
-  await page.click("a");
-  await expect(page).toHaveURL("https://netology.ru/");
+test("Успешная авторизация", async ({ page }) => {
+  await page.goto("https://netology.ru/?modal=sign_in");
+  await page.getByText("Другие способы входа").click();
+  await page.getByText("Войти по почте").click();
 
-  // Click text=Учиться бесплатно
-  await page.click("text=Учиться бесплатно");
-  await expect(page).toHaveURL("https://netology.ru/free");
+  await page.getByPlaceholder("Email").fill(email);
+  await page.getByPlaceholder("Пароль").fill(password);
+  await page.getByTestId("login-submit-btn").click();
 
-  page.click("text=Бизнес и управление");
+  await expect(page).toHaveURL(/https:\/\/netology\.ru\/profile/, { timeout: 60000 });
+  await expect(
+    page.getByRole("heading", { name: "Здравствуйте", level: 2 })
+  ).toBeVisible({ timeout: 30000 });
+});
 
-  // Click text=Как перенести своё дело в онлайн
-  await page.click("text=Как перенести своё дело в онлайн");
-  await expect(page).toHaveURL(
-    "https://netology.ru/programs/kak-perenesti-svoyo-delo-v-onlajn-bp"
-  );
+test("Неуспешная авторизация", async ({ page }) => {
+  await page.goto("https://netology.ru/?modal=sign_in");
+  await page.getByText("Другие способы входа").click();
+  await page.getByText("Войти по почте").click();
+
+  await page.getByPlaceholder("Email").fill("invalid_email@example.com");
+  await page.getByPlaceholder("Пароль").fill("invalid_password123");
+  await page.getByTestId("login-submit-btn").click();
+
+  const errorHint = page.getByTestId("login-error-hint");
+  await expect(errorHint).toBeVisible({ timeout: 60000 });
+  await expect(errorHint).toHaveText("Вы ввели неправильно логин или пароль.");
 });
